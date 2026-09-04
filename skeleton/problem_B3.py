@@ -4,64 +4,126 @@ import json
 from pathlib import Path
 from gtts import gTTS
 from dotenv import load_dotenv
+from pprint import pprint
+
+load_dotenv()
+
+# 1. 알라딘 API 키
+MY_TTBKEY = os.getenv('MY_TTBKEY')
+
+# 2. 알라딘 검색 API URL
+ALADIN_SEARCH_URL = 'https://www.aladin.co.kr/ttb/api/ItemSearch.aspx'
 
 
-load_dotenv()  # .env 파일을 읽어 환경 변수로 설정합니다.
-
-# 1. [ dotenv를 활용하여 알라딘 API 키 가져오기 ]
-MY_TTBKEY = os.getenv('나의 알라딘 API 키')
-# 2. [ 공식 문서를 참고하여 알라딘 API 검색 URL 설정하기 ]
-ALADIN_SEARCH_URL = '알라딘 검색 API URL'
-
-# 3. 주제별 도서 데이터를 가져오는 함수 정의
+# 3. 주제별 도서 데이터 가져오기
 def fetch_books_by_topic(topic, max_results=30):
-    url = ALADIN_SEARCH_URL
-    # 3.1 [ API 요청에 필요한 파라미터 설정 (문서 참고하여 작성해보기) ]
     params = {
-        
+        'ttbkey': MY_TTBKEY,
+        'Query': topic,
+        'QueryType': 'Title',
+        'MaxResults': max_results,
+        'start': 1,
+        'SearchTarget': 'Book',
+        'output': 'js',
+        'Version': '20131101',
     }
-    # 3.2 [ HTTP 요청 보내고고 응답 데이터를 JSON 형식으로 반환하기 ]
-    pass
+
+    response = requests.get(
+        url=ALADIN_SEARCH_URL,
+        params=params
+    )
+
+    return response.json()
 
 
-# 4. 도서 정보를 JSON 파일로 저장하는 함수 정의
+# 4. 도서 정보를 JSON 파일로 저장
 def save_books_to_json(books, filename, max_save=5):
-    
     book_list = []
+
     for book in books:
-        # 4.1 [ 책 정보에서 'description'이 있는 경우 book_list에 총 5개만 추가 ]
-        pass
 
-    # 4.2 [ 5개의 도서 정보를 JSON 파일로 저장 ]
-    # book_list를 'output/korean_literature_books.json' 으로 저장합니다.
-    pass
+        # description이 있는 책만 저장
+        if book.get('description'):
 
-    # 4.3 [ 저장된 책 정보 반환 ]
-    pass
+            book_info = {
+                '제목': book['title'],
+                '요약': book['description']
+            }
+
+            book_list.append(book_info)
+
+        # 5개가 모이면 종료
+        if len(book_list) == max_save:
+            break
+
+    # output 폴더 생성
+    output = Path('skeleton/output')
+    output.mkdir(parents=True, exist_ok=True)
+
+    # JSON 저장
+    file_path = output / filename
+
+    with file_path.open('w', encoding='utf-8') as json_file:
+        json.dump(
+            book_list,
+            json_file,
+            ensure_ascii=False,
+            indent=4
+        )
+
+    return book_list
 
 
-# 5. 입력의 text를 음성 파일로 변환하는 함수 정의
+# 5. text를 MP3 파일로 변환
 def create_tts_file(text, filename):
-    # gTTS를 사용하여 입력 받은 text를 MP3 파일로 저장합니다.
-    # 파일은 output/book_n.mp3 로 저장한다. (n은 숫자)
-    pass  
+
+    tts = gTTS(
+        text=text,
+        lang='ko',
+        slow=False
+    )
+
+    output = Path('skeleton/output')
+    output.mkdir(parents=True, exist_ok=True)
+
+    file_path = output / filename
+
+    tts.save(str(file_path))
 
 
-# 6. '한국문학' 도서 데이터를 처리하는 함수 정의
+# 6. 한국문학 도서 처리
 def process_korean_literature_books():
-    # 6.1 [ fetch_books_by_topic()을 호출하여 '한국문학' 관련 도서를 검색 ]
-    pass
 
-    # 6.2 [ save_books_to_json() 를 호출하여 5개의 도서 정보를 JSON으로 저장 및 저장된 데이터 가져오기 ]
-    pass
+    # 6.1 한국문학 검색
+    books = fetch_books_by_topic('한국문학').get('item', [])
 
-    # 각 책의 제목과 요약을 음성 파일로 저장 ]
+    # 6.2 description이 있는 책 5개만 JSON 저장
+    books = save_books_to_json(
+        books,
+        'korean_literature_books.json',
+        max_save=5
+    )
+
+    # 6.3 저장된 5권만 MP3 생성
     for i, book in enumerate(books, 1):
-        # 6.3 [ create_tts_file 을 호출하여 제목과 요약 정보를 합쳐 음성 파일로 저장 ]
-        pass
 
-    # 6.4 [ 처리 완료 메시지 출력하기 ]
-    pass  
+        text = (
+            f"제목은 {book['제목']}입니다. "
+            f"요약은 {book['요약']}입니다."
+        )
+
+        file_name = f'book_{i}.mp3'
+
+        create_tts_file(
+            text,
+            file_name
+        )
+
+    # 6.4 완료 메시지
+    print(
+        f"{len(books)}개의 책 정보를 처리하고 "
+        "음성 파일로 저장했습니다."
+    )
 
 
 # 함수 실행

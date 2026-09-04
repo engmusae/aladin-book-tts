@@ -46,7 +46,7 @@ def classify_and_save_books():
 
     # 4.2 [ 할인 도서 분류하기 ]
     for book in economy_books:
-        if book['priceSales'] :
+        if book['priceSales']< book['priceStandard'] :
             discounts.append(book)
         else:
             regulars.append(book)
