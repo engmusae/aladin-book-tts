@@ -1,24 +1,34 @@
 import os  # 운영 체제와 상호작용하기 위한 라이브러리
 import requests  # HTTP 요청을 보내기 위한 라이브러리
 from dotenv import load_dotenv  # .env 파일에서 환경 변수를 로드하기 위한 라이브러리
+from pprint import pprint
 
-
-load_dotenv()  # .env 파일을 읽어 환경 변수로 설정합니다.
+load_dotenv()
 
 # 1. [ dotenv를 활용하여 알라딘 API 키 가져오기 ]
-MY_TTBKEY = os.getenv('나의 알라딘 API 키')
+MY_TTBKEY = os.getenv('MY_TTBKEY')
 # 2. [ 공식 문서를 참고하여 알라딘 API 검색 URL 설정하기 ]
-ALADIN_SEARCH_URL = '알라딘 검색 API URL'
+ALADIN_SEARCH_URL = 'https://www.aladin.co.kr/ttb/api/ItemSearch.aspx'
 
 # 3. 주제별 도서 데이터를 가져오는 함수 정의
 def fetch_books_by_topic(topic, max_results=30):
     url = ALADIN_SEARCH_URL
     # 3.1 [ API 요청에 필요한 파라미터 설정 (문서 참고하여 작성해보기) ]
     params = {
-    
+            'ttbkey':MY_TTBKEY,  # 발급받은 키 (위에서 읽어온 변수)
+            'Query': topic,  # 검색어
+            'QueryType': 'Title',  # Title / Author / Publisher
+            'MaxResults': max_results,
+            'start': 1,
+            'SearchTarget': 'Book',
+            'output': 'js',  # js = JSON 형식으로 응답
+            'Version': '20131101',
     }
     # 3.2 [ HTTP 요청 보내고 응답 데이터를 JSON 형식으로 반환하기 ]
-    pass
+    response = requests.get(url=url, params=params) # 요청시 위에서 설정한 파라미터 정보를 같이 전달
+    response = response.json()
+
+    return response
 
 # 4. 도서 데이터를 수집하고 분석하는 함수 정의
 def collect_and_analyze_books():
@@ -32,35 +42,44 @@ def collect_and_analyze_books():
     # 5.1 [ fetch_book_by_topic 함수 완성 후 주제별 도서 데이터 검색하여 가져오기 ]
     for topic in topics:
         # 5.2 [ all_books 리스트에 가져온 도서 데이터 추가하기 ]
-        pass
+        books = fetch_books_by_topic(topic=topic).get('item')
+        all_books.extend(books)
 
         # 5.3 [ 주제별 가격 및 출판 연도 수집하기 ]
         prices = []         # 가격 리스트
         pub_years = []      # 출판 연도 리스트
         for book in books:
-            pass
+            prices.append(book['priceStandard'])            
+            pub_years.append(book['pubDate'].split("-")[0])
 
         # 5.4 [ 평균 가격, 연도 계산하기 ]
         # 연도는 정수형으로 변환
-        pass
-
+        avg_price = sum(map(int, prices))/len(prices)
+        avg_pub_year = sum(map(int,pub_years))/len(pub_years)
+        
         topic_stats[topic] = {
             'avg_price': avg_price,
             'avg_pub_year': avg_pub_year
         }
 
+        # print(topic_stats)
+
         # 5.5 [ 전체 도서 평균 가격과 평균 연도 구하기]
-        pass
+        for _ in range(len(topic_stats)):
+            overall_price += topic_stats[topic]['avg_price']
+            overall_avg_price= overall_price/ len(topic_stats)
+            overall_year += topic_stats[topic]['avg_pub_year']
+            overall_avg_year= overall_year/ len(topic_stats)
         
 
     # 계산 결과 출력
     print("통합된 도서 수:", len(all_books))
-    print(f"\n전체 통계: 평균 가격 {overall_avg_price:.0f}원, 평균 출판 연도 {overall_avg_year}")
+    print(f"\n전체 통계: 평균 가격 {overall_avg_price:.0f}원, 평균 출판 연도 {overall_avg_year:.0f}")
 
     for topic in topics:
         print(f"{topic} 주제 통계:")
         print(f"  평균 가격: {topic_stats[topic]['avg_price']:.2f}원")
-        print(f"  평균 출판 연도: {topic_stats[topic]['avg_pub_year']}")
+        print(f"  평균 출판 연도: {topic_stats[topic]['avg_pub_year']:.0f}")
 
 
 # 함수 실행
