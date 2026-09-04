@@ -42,9 +42,10 @@ def process_ai_books():
 
     # 3.5 [ JSON 파일로 저장할 데이터 준비 ]
     # output/ai_top10_books.json 파일로 저장
-    with open('ai_top10_books.json', 'w', encoding='utf-8') as f:
-        json.dump(ai_top10_books, f, ensure_ascii=False, indent=4)
-
+    file_path = 'output/ai_top10_books.json'
+    path = Path(file_path)
+    path.write_text(json.dumps(ai_top10_books, ensure_ascii=False, indent=4), encoding='utf-8')
+        
     # 3.6 [ 완료 메시지를 출력 ]
     print("ai_top10_books.json 파일 저장 완료")
 
